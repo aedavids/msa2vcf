@@ -264,6 +264,43 @@ class MSA2VCFImplementation(object):
         return (sampleNamesList, sampleNameLookUp, AST)
     
     ################################################################################ 
+    def _parseDeletion(self, bases, i, numBases, position, refSeq, sampleSeq):
+        # examples see testParseMSASample_DeleteSNP() and testDeleteRun()
+         
+        # startPosition is index into true reference sequence
+        # i is the index into the MSA format reference sequence
+        startPosition = position - 1
+        if startPosition <= 0:
+            startPosition = 1
+         
+        endOfDeletionPosition = i
+        while endOfDeletionPosition + 1 < numBases and sampleSeq[endOfDeletionPosition + 1] == '.':
+            endOfDeletionPosition += 1
+            if refSeq[endOfDeletionPosition] in bases:
+                position += 1                    
+         
+        if i - 1 >= 0: 
+            msaRefChar = refSeq[i -1:endOfDeletionPosition + 1] 
+            msaRefChar = msaRefChar. replace('.', '').replace('|', '') # see testAGenBug288()
+            alt = msaRefChar[0]
+        else :
+            # deletion at beginning
+            msaRefChar = refSeq[i:endOfDeletionPosition + 2]
+            msaRefChar = msaRefChar. replace('.', '').replace('|', '') # see testAGenBug288()                    
+            alt = msaRefChar[-1] #"." # unknown. i.e delete first nucleotide in ref
+        
+        # FIXME: I do not think we need if/else just use i += (endOfDeletionPosition - i) + 1
+        if (endOfDeletionPosition - i) == 0 :
+            # single nucleotide deletion
+            i += 1
+        else:
+            # run of deletions
+            i += (endOfDeletionPosition - i) + 1
+            
+        return (i,startPosition, msaRefChar, alt )            
+
+
+    ################################################################################ 
     def _parseInsertion(self, bases, i, numBases, position, refSeq, sampleSeq):
         # startPosition is index into true reference sequence
         # i is the index into the MSA format reference sequence
@@ -390,21 +427,28 @@ class MSA2VCFImplementation(object):
             
             #####################################################                  
             elif msfChar == '.' and msaRefChar in bases:
+                # FIXME: unit test fail if we use the refactored version of delete
+#                 i, startPosition, msaRefChar, alt = self._parseDeletion(bases, i, numBases, position, refSeq, sampleSeq)                
+#                 varientType = VariantType.deletion                
+#                 msfs = MSASample(refChromName, sampleName, startPosition, ident, msaRefChar, alt, qual, 
+#                                     filterArg, info, formatArg, varientType)
+#                 ret.append(msfs)
+                                
                 varientType = VariantType.deletion
                 # examples see testParseMSASample_DeleteSNP() and testDeleteRun()
-                
+                  
                 # startPosition is index into true reference sequence
                 # i is the index into the MSA format reference sequence
                 startPosition = position - 1
                 if startPosition <= 0:
                     startPosition = 1
-                
+                  
                 endOfDeletionPosition = i
                 while endOfDeletionPosition + 1 < numBases and sampleSeq[endOfDeletionPosition + 1] == '.':
                     endOfDeletionPosition += 1
                     if refSeq[endOfDeletionPosition] in bases:
                         position += 1                    
-                
+                  
                 if i - 1 >= 0: 
                     msaRefChar = refSeq[i -1:endOfDeletionPosition + 1] 
                     msaRefChar = msaRefChar. replace('.', '').replace('|', '') # see testAGenBug288()
@@ -414,7 +458,7 @@ class MSA2VCFImplementation(object):
                     msaRefChar = refSeq[i:endOfDeletionPosition + 2]
                     msaRefChar = msaRefChar. replace('.', '').replace('|', '') # see testAGenBug288()                    
                     alt = msaRefChar[-1] #"." # unknown. i.e delete first nucleotide in ref
-
+  
                 # FIXME: I do not think we need if/else just use i += (endOfDeletionPosition - i) + 1
                 if (endOfDeletionPosition - i) == 0 :
                     # single nucleotide deletion
@@ -422,7 +466,7 @@ class MSA2VCFImplementation(object):
                 else:
                     # run of deletions
                     i += (endOfDeletionPosition - i) + 1
-                    
+                      
                 msfs = MSASample(refChromName, sampleName, startPosition, ident, msaRefChar, alt, qual, 
                                     filterArg, info, formatArg, varientType)
                 ret.append(msfs)                

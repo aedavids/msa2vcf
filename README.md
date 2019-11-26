@@ -49,3 +49,6 @@ $ export PYTHONPATH=`pwd`
 $ cd test
 $ python3 -m unittest discover -v
 ```
+
+## How to Debug
+see [howToDebugPositionBugs.md](howToDebugPositionBugs.md)
